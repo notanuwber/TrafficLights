@@ -22,8 +22,6 @@ ltl safeLeftTurn { [] ((sT[0].v[0]==GREEN -> (isAllLinearLightVehicle(RED) && is
 					&& (sT[1].v[0]==GREEN -> (isAllLinearLightVehicle(RED) && isTurnLightVehicle(0,RED)))
 					&& (sT[1].v[1]==GREEN -> (isAllLinearLightVehicle(RED) && isTurnLightVehicle(0,RED))))}
 
-
-
 ltl pedestrianDelay { [](<>(sL[0].p[0]==WALK) -> ((sL[0].p[0]!=WALK) U ((isLinearLightVehicle(0,RED) && isAllTurnLightVehicle(RED)) && (sL[0].p[0]!=WALK)))) }
 
 ltl straightTrafficDelay {[](<>(isLinearLightVehicle(0,GREEN)) -> (!isLinearLightVehicle(0,GREEN) U ((isAllLinearLightVehicle(RED) && isAllLinearLightPedestrian(DONT_WALK)) && !isLinearLightVehicle(0,GREEN))))}
@@ -36,14 +34,12 @@ ltl productiveStraightGoingVehicle { []<>(sL[0].v[0]==GREEN) }
 
 ltl productiveLeftTurningVehicle { []<>(sT[0].v[0]==GREEN) }
 
-ltl signalOrderOrange { []((sT[0].v[0]==GREEN) -> ((X(sT[0].v[0]==ORANGE)) || (X(sT[0].v[0]==GREEN) U (sT[0].v[0]==ORANGE)))) }
+ltl signalOrderOrange { []((sT[0].v[0]==GREEN) -> ((sT[0].v[0]==GREEN) U (sT[0].v[0]==ORANGE))) }
 
+ltl signalOrderRed { []((sT[0].v[0]==ORANGE) -> ((sT[0].v[0]==ORANGE) U (sT[0].v[0]==RED))) }
 
-/*
-ltl pedestrianDelay { []((isLinearLightVehicle(0,RED) && isAllTurnLightVehicle(RED)) -> (X(<>(sL[0].p[0]==WALK))) ) }
+ltl signalOrderGreen { []((sT[0].v[0]==RED) -> ((sT[0].v[0]==RED) U (sT[0].v[0]==GREEN))) }
 
-ltl safePedestrian { <>(sL[0].p[0] == WALK) };
- */
 
 /* variation of above for other lights, your properties, won¡¯t be checked by Vocareum */
 /*
