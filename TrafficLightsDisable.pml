@@ -10,7 +10,7 @@
 #define isAllTurnLightVehicle(color) (isTurnLightVehicle(0,color) && isTurnLightVehicle(1,color))
 
 ltl disableSuccess { (sI == DISABLED) -> [](isAllLinearLightVehicle(OFF) && isAllLinearLightPedestrian(OFF) && isAllTurnLightVehicle(OFF)) }
- 
+
 init {
 	run Intersection();
 	enableI(); /* statements or macro that enables intersection */

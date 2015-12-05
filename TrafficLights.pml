@@ -44,11 +44,15 @@ chan event_queue_L [2] = [3] of { mtype };
 chan event_queue_T [2] = [3] of { mtype };
 
 /* macros */
-/* you¡¯ll need plenty of macros to keep your model organized, clean, non-redundant 
+/* you'll need plenty of macros to keep your model organized, clean, non-redundant 
 */
 
 inline enableI() {
 	to_intersection ! ENABLED;
+}
+
+inline disableI() {
+	to_intersection ! DISABLED;
 }
 
 inline blockPedestrian(index) {
@@ -79,10 +83,13 @@ proctype Intersection() {
 	run TurnLightSet(0);
 	run TurnLightSet(1);
 	do
-		:: atomic{ to_intersection?ENABLED -> sI = ENABLED; run scheduling_loop(); break; }
+		:: atomic{ to_intersection ? ENABLED -> sI = ENABLED; run scheduling_loop(); break; }
 	od
 	do
-		:: atomic{ to_intersection?FAILED -> sI = FAILED; break; }
+		:: atomic{ to_intersection ? FAILED -> sI = FAILED; break; }
+	od
+	do
+		:: atomic{ to_intersection ? DISABLED -> sI = DISABLED; break; }
 	od
 }
 
@@ -97,15 +104,15 @@ proctype LinearLightSet(bit i) {
     /* Currently ignores the pedestrianOn boolean variable. We might change this later for when switch to RED and ALL_STOP */
 	whileloop: event_queue_L[i]?next;
 	    if
-			:: (sL[i].s == OFF && next == INIT) -> atomic{ sL[i].s = RED; blockPedestrian(i); switchVehicularStopLight(i, RED); SL ! NOTIFY; }
+			:: (sL[i].s == OFF && next == INIT) -> sL[i].s = RED; blockPedestrian(i); switchVehicularStopLight(i, RED); SL ! NOTIFY;
 	    	:: (sL[i].s == RED && next == ADVANCE) -> sL[i].s = GREEN; blockPedestrian(i); switchVehicularStopLight(i, GREEN); event_queue_L[i] ! PRE_STOP;
 	    	:: (sL[i].s == GREEN && next == PRE_STOP) -> sL[i].s = ORANGE; blockPedestrian(i); switchVehicularStopLight(i, ORANGE); event_queue_L[i] ! STOP;
-	    	:: (sL[i].s == ORANGE && next == STOP) -> atomic{ sL[i].s = RED;  switchVehicularStopLight(i, RED); unblockPedestrian(i);  SL ! NOTIFY; } /*order bug*/
-	    	:: (sL[i].s == RED && next == ALL_STOP) -> atomic{ sL[i].v[0] = RED; sL[i].v[1] = RED; blockPedestrian(i); SL ! NOTIFY}
-	    	:: (sL[i].s == OFF && next != INIT) -> SL ! INTERRUPTED
-	    	:: (sL[i].s == RED && (next != ADVANCE && next != ALL_STOP)) -> SL ! INTERRUPTED
-	    	:: (sL[i].s == GREEN && next != PRE_STOP) -> SL ! INTERRUPTED
-	    	:: (sL[i].s == ORANGE && next != STOP) -> SL ! INTERRUPTED
+	    	:: (sL[i].s == ORANGE && next == STOP) -> sL[i].s = RED;  switchVehicularStopLight(i, RED); unblockPedestrian(i);  SL ! NOTIFY; /*order bug*/
+	    	:: (sL[i].s == RED && next == ALL_STOP) -> sL[i].v[0] = RED; sL[i].v[1] = RED; blockPedestrian(i); SL ! NOTIFY;
+	    	:: (sL[i].s == OFF && next != INIT) -> SL ! INTERRUPTED;
+	    	:: (sL[i].s == RED && (next != ADVANCE && next != ALL_STOP)) -> SL ! INTERRUPTED;
+	    	:: (sL[i].s == GREEN && next != PRE_STOP) -> SL ! INTERRUPTED;
+	    	:: (sL[i].s == ORANGE && next != STOP) -> SL ! INTERRUPTED;
 	    fi
     goto whileloop
 }
@@ -118,10 +125,10 @@ proctype TurnLightSet(bit i) {
 	/* Ignoring owners and IDs */
 	whileloop: event_queue_T[i]?next;
 		if
-	    	:: (sT[i].s == OFF && next == INIT) -> atomic{ sT[i].s = RED;  switchVehicularTurnLight(i, RED); SL ! NOTIFY; }
+	    	:: (sT[i].s == OFF && next == INIT) -> sT[i].s = RED;  switchVehicularTurnLight(i, RED); SL ! NOTIFY;
 	    	:: (sT[i].s == RED && next == ADVANCE) -> sT[i].s = GREEN; switchVehicularTurnLight(i, GREEN); event_queue_T[i] ! PRE_STOP;
 	    	:: (sT[i].s == GREEN && next == PRE_STOP) -> sT[i].s = ORANGE; switchVehicularTurnLight(i, ORANGE); event_queue_T[i] ! STOP;
-	    	:: (sT[i].s == ORANGE && next == STOP) -> atomic{ sT[i].s = RED; switchVehicularTurnLight(i, RED); SL ! NOTIFY; }
+	    	:: (sT[i].s == ORANGE && next == STOP) -> sT[i].s = RED; switchVehicularTurnLight(i, RED); SL ! NOTIFY;
 	    	:: (sT[i].s == OFF && next != INIT) -> SL!INTERRUPTED
 	    	:: (sT[i].s == RED && (next != ADVANCE && next != ALL_STOP)) -> SL ! INTERRUPTED
 	    	:: (sT[i].s == GREEN && next != PRE_STOP) -> SL ! INTERRUPTED
@@ -143,5 +150,5 @@ proctype scheduling_loop() {
 					event_queue_T[0] ! ADVANCE; SL ? NOTIFY;
 					event_queue_T[1] ! ADVANCE; SL ? NOTIFY;
 		goto whileloop
-	} unless { SL?INTERRUPTED -> to_intersection!FAILED}
+	} unless { SL ? INTERRUPTED -> to_intersection ! FAILED}
 }

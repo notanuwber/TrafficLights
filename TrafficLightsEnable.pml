@@ -22,11 +22,11 @@ ltl safeLeftTurn { [] ((sT[0].v[0]==GREEN -> (isAllLinearLightVehicle(RED) && is
 					&& (sT[1].v[0]==GREEN -> (isAllLinearLightVehicle(RED) && isTurnLightVehicle(0,RED)))
 					&& (sT[1].v[1]==GREEN -> (isAllLinearLightVehicle(RED) && isTurnLightVehicle(0,RED))))}
 
-ltl pedestrianDelay { [](<>(sL[0].p[0]==WALK) -> ((sL[0].p[0]!=WALK) U ((isLinearLightVehicle(0,RED) && isAllTurnLightVehicle(RED)) && (sL[0].p[0]!=WALK)))) }
+ltl pedestrianDelay { []((sL[0].p[0]==DONT_WALK) -> ((sL[0].p[0]==DONT_WALK) U ((isLinearLightVehicle(0,RED) && isAllTurnLightVehicle(RED)) && (sL[0].p[0]==DONT_WALK)))) }
 
-ltl straightTrafficDelay {[](<>(isLinearLightVehicle(0,GREEN)) -> (!isLinearLightVehicle(0,GREEN) U ((isAllLinearLightVehicle(RED) && isAllLinearLightPedestrian(DONT_WALK)) && !isLinearLightVehicle(0,GREEN))))}
+ltl straightTrafficDelay {[]((isLinearLightVehicle(0,RED)) -> (isLinearLightVehicle(0,RED) U ((isAllLinearLightVehicle(RED) && isAllLinearLightPedestrian(DONT_WALK)) && isLinearLightVehicle(0,RED))))}
 
-ltl leftTurnDelay {[](<>(isTurnLightVehicle(0,GREEN)) -> ((!isTurnLightVehicle(0,GREEN)) U ((isAllLinearLightVehicle(RED) && isAllLinearLightPedestrian(DONT_WALK)) && !isTurnLightVehicle(0,GREEN))))}
+ltl leftTurnDelay {[]((isTurnLightVehicle(0,RED)) -> (isTurnLightVehicle(0,RED) U ((isAllLinearLightVehicle(RED) && isAllLinearLightPedestrian(DONT_WALK)) && isTurnLightVehicle(0,RED))))}
 
 ltl productivePedestrian { []<>(sL[0].p[0]==WALK) }
 
