@@ -1,0 +1,46 @@
+________________________________________________________________________________________________
+18654 PROJECT 2: Model-Checking a Multithreaded Java Program with Promela/Spin
+________________________________________________________________________________________________
+TEAM MEMBERS
+List team members¡¯ names and Andrew ids. 
+Pramothini Dhandapany (), Elizabeth Dwornik (), William Hendry (), Nan Wang (nwang1)
+________________________________________________________________________________________________
+STRATEGY (1 pt)
+Explain how you tackled the problem: where you begun, how you proceeded as a team, how you divided the tasks, how you gradually identified the different pieces of the puzzle to arrive at an initial solution, which abstraction strategies you used, if you used successively more detailed models, how you refined your solutions to arrive at a final model.  Did the barebones version of TrafficLIghts and JPF experiments you performed during L4 help? 
+
+First we abstract the skeleton of the java system.
+Then we write ltl to verify if any issue in the system. If ltl fails, we use the generated trail file to simulate the scenario and find the corresponding bug in the current model.
+________________________________________________________________________________________________
+
+
+FAULTS FOUND (2 pts)
+List all bugs/issues found in the in the Java code, including sources and unit tests, and the incorrect model derived from Java code. Explain how to fix these bugs in the Java code. Use a bullet list. 
+
+Bug 1. In the origin java code, pedestrians were initialized as WALK.
+        This is not correct. They should be initialized to DONT_WALK
+		
+Bug 2. In the origin java code, after Intersection send ALL_STOP to LinearLightSet, it did not wait for NOTIFY from LinearLightSet.
+        Intersection should wait for NOTIFY after sending ALL_STOP, while LinearLightSet should send NOTIFY to Intersection after handling ALL_STOP.
+		
+Bug 3. In the origin java code, it changed pedestrians from DONT_WALK to WALK before changing vehicular to RED.
+        It should change vehicular to RED before hanged pedestrians from DONT_WALK to WALK.
+		
+Bug 4. In the origin java code, it is the client who calls disable() function that changed all lights state to OFF.
+        This is not correct since there would be racing condition between client and all LightSet.
+		It should be LightSet itselt change its all states into OFF.
+
+________________________________________________________________________________________________
+LESSONS LEARNED (1)
+Summarize your results and experience. List lessons learned: what worked well, challenges faced, open issues, and any recommendations. 
+
+
+
+
+________________________________________________________________________________________________
+CONTRIBUTIONS (0)
+Each team member should briefly describe (one or two paragraphs) their contribution in their own words. No project points will be awarded to team members with missing contribution. 
+Pramothini Dhandapany: ...
+Elizabeth Dwornik:  ...
+William Hendry: ...
+Nan Wang: ...
+________________________________________________________________________________________________

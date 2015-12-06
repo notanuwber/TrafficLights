@@ -23,7 +23,7 @@ typedef TurnLightSetState   {
 /* these are the only global variables to be used in all properties */
 LinearLightSetState sL[2];
 TurnLightSetState sT[2];
-mtype sI; /* intersection status */
+mtype sI = OFF; /* intersection status */
 
 /* usage examples of global variables */
 /*
@@ -42,10 +42,6 @@ chan to_intersection = [0] of { mtype };
 chan SL = [0] of { mtype };
 chan event_queue_L [2] = [3] of { mtype };
 chan event_queue_T [2] = [3] of { mtype };
-
-/* macros */
-/* you'll need plenty of macros to keep your model organized, clean, non-redundant 
-*/
 
 inline enableI() {
 	to_intersection ! ENABLED;
@@ -75,6 +71,26 @@ inline switchVehicularTurnLight(index, color) {
 	sT[index].v[1] = color;
 }
 
+inline resetLightSets() {
+	event_queue_L[0] ! DISABLED;
+	event_queue_T[0] ! DISABLED;
+	event_queue_L[1] ! DISABLED;
+	event_queue_T[1] ! DISABLED;
+}
+
+/* can be deleted
+inline emptyChannel(q) {
+	skip;
+	d_step {   
+		do
+		:: q?_
+		:: empty(q) -> break
+		od;
+		skip
+	}
+}
+*/
+
 /* proctype definitions  */
 
 proctype Intersection() {
@@ -83,14 +99,17 @@ proctype Intersection() {
 	run TurnLightSet(0);
 	run TurnLightSet(1);
 	do
-		:: atomic{ to_intersection ? ENABLED -> sI = ENABLED; run scheduling_loop(); break; }
+		:: to_intersection ? ENABLED -> sI = ENABLED; run scheduling_loop(); break;
 	od
 	do
-		:: atomic{ to_intersection ? FAILED -> sI = FAILED; break; }
+		:: to_intersection ? FAILED -> sI = FAILED; resetLightSets(); break;
+		:: to_intersection ? DISABLED -> sI = DISABLED; resetLightSets(); break;
 	od
+	/* can be deleted
 	do
-		:: atomic{ to_intersection ? DISABLED -> sI = DISABLED; break; }
+		:: sI != FAILED -> to_intersection ? FAILED -> break;
 	od
+	*/
 }
 
 proctype LinearLightSet(bit i) {
@@ -102,19 +121,22 @@ proctype LinearLightSet(bit i) {
     sL[i].v[1] = OFF;
     /* Ignoring owners and IDs */
     /* Currently ignores the pedestrianOn boolean variable. We might change this later for when switch to RED and ALL_STOP */
-	whileloop: event_queue_L[i]?next;
+	whileloop: event_queue_L[i] ? next;
 	    if
 			:: (sL[i].s == OFF && next == INIT) -> sL[i].s = RED; blockPedestrian(i); switchVehicularStopLight(i, RED); SL ! NOTIFY;
 	    	:: (sL[i].s == RED && next == ADVANCE) -> sL[i].s = GREEN; blockPedestrian(i); switchVehicularStopLight(i, GREEN); event_queue_L[i] ! PRE_STOP;
 	    	:: (sL[i].s == GREEN && next == PRE_STOP) -> sL[i].s = ORANGE; blockPedestrian(i); switchVehicularStopLight(i, ORANGE); event_queue_L[i] ! STOP;
-	    	:: (sL[i].s == ORANGE && next == STOP) -> sL[i].s = RED;  switchVehicularStopLight(i, RED); unblockPedestrian(i);  SL ! NOTIFY; /*order bug*/
+	    	:: (sL[i].s == ORANGE && next == STOP) -> sL[i].s = RED;  switchVehicularStopLight(i, RED); unblockPedestrian(i);  SL ! NOTIFY;
 	    	:: (sL[i].s == RED && next == ALL_STOP) -> sL[i].v[0] = RED; sL[i].v[1] = RED; blockPedestrian(i); SL ! NOTIFY;
-	    	:: (sL[i].s == OFF && next != INIT) -> SL ! INTERRUPTED;
-	    	:: (sL[i].s == RED && (next != ADVANCE && next != ALL_STOP)) -> SL ! INTERRUPTED;
-	    	:: (sL[i].s == GREEN && next != PRE_STOP) -> SL ! INTERRUPTED;
-	    	:: (sL[i].s == ORANGE && next != STOP) -> SL ! INTERRUPTED;
+	    	:: (sL[i].s == OFF && next != INIT && next != DISABLED) -> SL ! INTERRUPTED;
+	    	:: (sL[i].s == RED && (next != ADVANCE && next != ALL_STOP && next != DISABLED)) -> SL ! INTERRUPTED;
+	    	:: (sL[i].s == GREEN && next != PRE_STOP && next != DISABLED) -> SL ! INTERRUPTED;
+	    	:: (sL[i].s == ORANGE && next != STOP && next != DISABLED) -> SL ! INTERRUPTED;
+	    	:: (next == DISABLED) -> goto endState;
 	    fi
     goto whileloop
+    
+    endState: sL[i].s = OFF; sL[i].p[0] = OFF;sL[i].p[1] = OFF;sL[i].v[0] = OFF; sL[i].v[1] = OFF; /* emptyChannel(event_queue_L[i]); can be deleted */
 }
 
 proctype TurnLightSet(bit i) {
@@ -123,18 +145,21 @@ proctype TurnLightSet(bit i) {
 	sT[i].v[0] = OFF;
 	sT[i].v[1] = OFF;
 	/* Ignoring owners and IDs */
-	whileloop: event_queue_T[i]?next;
+	whileloop: event_queue_T[i] ? next;
 		if
 	    	:: (sT[i].s == OFF && next == INIT) -> sT[i].s = RED;  switchVehicularTurnLight(i, RED); SL ! NOTIFY;
 	    	:: (sT[i].s == RED && next == ADVANCE) -> sT[i].s = GREEN; switchVehicularTurnLight(i, GREEN); event_queue_T[i] ! PRE_STOP;
 	    	:: (sT[i].s == GREEN && next == PRE_STOP) -> sT[i].s = ORANGE; switchVehicularTurnLight(i, ORANGE); event_queue_T[i] ! STOP;
 	    	:: (sT[i].s == ORANGE && next == STOP) -> sT[i].s = RED; switchVehicularTurnLight(i, RED); SL ! NOTIFY;
-	    	:: (sT[i].s == OFF && next != INIT) -> SL!INTERRUPTED
-	    	:: (sT[i].s == RED && (next != ADVANCE && next != ALL_STOP)) -> SL ! INTERRUPTED
-	    	:: (sT[i].s == GREEN && next != PRE_STOP) -> SL ! INTERRUPTED
-	    	:: (sT[i].s == ORANGE && next != STOP) -> SL ! INTERRUPTED
+	    	:: (sT[i].s == OFF && next != INIT && next != DISABLED) -> SL!INTERRUPTED
+	    	:: (sT[i].s == RED && (next != ADVANCE && next != ALL_STOP  && next != DISABLED)) -> SL ! INTERRUPTED
+	    	:: (sT[i].s == GREEN && next != PRE_STOP && next != DISABLED) -> SL ! INTERRUPTED
+	    	:: (sT[i].s == ORANGE && next != STOP && next != DISABLED) -> SL ! INTERRUPTED
+	    	:: (next == DISABLED) -> goto endState;
 	    fi
     goto whileloop
+    
+    endState: sT[i].s = OFF; sT[i].v[0] = OFF; sT[i].v[1] = OFF; /* emptyChannel(event_queue_T[i]); can be deleted */
 }
 
 proctype scheduling_loop() {
@@ -150,5 +175,5 @@ proctype scheduling_loop() {
 					event_queue_T[0] ! ADVANCE; SL ? NOTIFY;
 					event_queue_T[1] ! ADVANCE; SL ? NOTIFY;
 		goto whileloop
-	} unless { SL ? INTERRUPTED -> to_intersection ! FAILED}
+	} unless { SL ? INTERRUPTED -> to_intersection ! FAILED; }
 }

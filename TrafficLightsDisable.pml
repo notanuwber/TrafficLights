@@ -9,11 +9,11 @@
 #define isTurnLightVehicle(index, color) (sT[index].v[0]==color && sT[index].v[1]==color)
 #define isAllTurnLightVehicle(color) (isTurnLightVehicle(0,color) && isTurnLightVehicle(1,color))
 
-ltl disableSuccess { (sI == DISABLED) -> [](isAllLinearLightVehicle(OFF) && isAllLinearLightPedestrian(OFF) && isAllTurnLightVehicle(OFF)) }
+ltl disableSuccess { (sI == DISABLED) -> <>(isAllLinearLightVehicle(OFF) && isAllLinearLightPedestrian(OFF) && isAllTurnLightVehicle(OFF)) }
 
 init {
 	run Intersection();
 	enableI(); /* statements or macro that enables intersection */
-	disableI(); /* statements or macro that disables intersection */
+	disableI(); /* statements or macro that disables intersection  */
 }
 
